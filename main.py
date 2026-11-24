@@ -21,12 +21,20 @@ LINE = (
 
 def main() -> None:
     line = LINE.strip()
-    assert 1 <= len(line) <= 200, f"line must be 1-200 chars, got {len(line)}"
-    assert "\n" not in line, "line must be a single line"
+    # Explicit checks (not assert): asserts are stripped under `python -O`,
+    # so a bad line would slip through silently instead of failing loudly.
+    if not 1 <= len(line) <= 200:
+        raise ValueError(f"line must be 1-200 chars, got {len(line)}")
+    if "\n" in line or "\r" in line:
+        raise ValueError("line must be a single line")
     out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "entry.txt").write_text(line, encoding="utf-8")
-    print(f"wrote {len(line)}-char line to {out_dir / 'entry.txt'}")
+    out_path = out_dir / "entry.txt"
+    out_path.write_text(line, encoding="utf-8")
+    # Read back and confirm the file holds exactly the validated line.
+    if out_path.read_text(encoding="utf-8") != line:
+        raise RuntimeError(f"written entry does not match validated line: {out_path}")
+    print(f"wrote {len(line)}-char line to {out_path}")
 
 
 if __name__ == "__main__":
